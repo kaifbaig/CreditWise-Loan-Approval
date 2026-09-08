@@ -2,6 +2,8 @@
 
 A Machine Learning classification project that predicts whether a loan application is **Approved** or **Rejected** using applicant, financial, employment, and credit-related information.
 
+🔗 **[Live Demo](https://creditwise-loan-predict.streamlit.app/)**
+
 ---
 
 ## 📌 Overview
@@ -554,6 +556,8 @@ A production loan approval system would require substantially more data, externa
 The reported performance reflects the specific dataset and test split used in this project and should not be interpreted as real-world financial decision-making accuracy.
 
 ## 🖥️ Streamlit Demo
+
+🔗 **[Live Demo](https://creditwise-loan-predict.streamlit.app/)**
 
 CreditWise includes a Streamlit web application that allows users to enter applicant, employment, financial, and loan information and receive a loan approval prediction from the trained Logistic Regression pipeline.
 
