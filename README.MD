@@ -303,7 +303,8 @@ The final results after feature engineering and hyperparameter tuning were:
 
 ### Logistic Regression
 
-Logistic Regression was selected as the **best overall model** after feature engineering and hyperparameter tuning.
+Logistic Regression was selected as the **best overall model** after
+feature engineering and hyperparameter tuning.
 
 ### Final Performance
 
@@ -314,13 +315,23 @@ Logistic Regression was selected as the **best overall model** after feature eng
 | Recall | **88.33%** |
 | F1 Score | **84.80%** |
 
-Logistic Regression achieved the highest **Accuracy**, **Recall**, and **F1 Score** among the final tuned models.
+F1 Score was used as the primary metric for overall model selection
+because it provides a balance between Precision and Recall.
 
-KNN achieved slightly higher Precision at **83.05%**, so Logistic Regression was not selected because it had the highest precision.
+Logistic Regression achieved the highest F1 Score (**84.80%**),
+Accuracy (**90.00%**), and Recall (**88.33%**) among the final tuned
+models.
 
-For this project, F1 Score was used as the primary overall comparison metric because it provides a balance between Precision and Recall.
+KNN achieved the highest Precision (**83.05%**), showing that no single
+model was best across every metric. However, Logistic Regression
+provided the strongest overall balance between Precision and Recall.
 
-Therefore, Logistic Regression was selected as the final model because it provided the strongest overall balance across the evaluation metrics while also achieving the highest Accuracy and Recall.
+Precision remains an important metric for this loan-approval problem
+because false-positive approvals represent cases where the model
+predicts a loan as Approved while the actual class is Rejected.
+
+Based on the primary selection criterion and the overall evaluation,
+Logistic Regression was selected as the final model.
 
 ### Final Confusion Matrix
 
