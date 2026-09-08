@@ -533,6 +533,8 @@ CreditWise-Loan-Approval/
 │   └── target_distribution.png
 │
 ├── credit_wise.ipynb
+├── app.py
+├── model.pkl
 ├── loan_approval_data.csv
 ├── README.md
 ├── requirements.txt
@@ -550,3 +552,45 @@ The model is not intended to be used as a real-world automated financial decisio
 A production loan approval system would require substantially more data, external validation, fairness and bias assessment, threshold analysis, domain expertise, regulatory review, continuous monitoring, and appropriate human oversight.
 
 The reported performance reflects the specific dataset and test split used in this project and should not be interpreted as real-world financial decision-making accuracy.
+
+## 🖥️ Streamlit Demo
+
+CreditWise includes a Streamlit web application that allows users to enter applicant, employment, financial, and loan information and receive a loan approval prediction from the trained Logistic Regression pipeline.
+
+The application includes:
+
+- Interactive input fields
+- Input validation
+- Dataset-range warnings for unusual values
+- Feature engineering
+- Loan approval prediction
+- Approval probability display
+
+### 📸 Application Screenshots
+
+#### Normal Prediction
+![CreditWise Normal Prediction](images/app_normal_prediction.png)
+
+#### Out-of-Distribution Input Warning
+![CreditWise OOD Warning](images/app_ood_warning.png)
+
+#### Loan Rejected Prediction
+![CreditWise Rejected Prediction](images/app_rejected_prediction.png)
+
+### Running the Application
+
+Install the required dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run the Streamlit application:
+
+```bash
+streamlit run app.py
+```
+
+The application will open in the browser and provide an interactive interface for making predictions.
+
+**Note:** The application is intended for educational and portfolio demonstration purposes. Predictions should not be treated as actual financial decisions.
