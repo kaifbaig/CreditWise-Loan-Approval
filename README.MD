@@ -537,7 +537,6 @@ CreditWise-Loan-Approval/
 ├── credit_wise.ipynb
 ├── app.py
 ├── model.pkl
-├── loan_approval_data.csv
 ├── README.md
 ├── requirements.txt
 └── .gitignore

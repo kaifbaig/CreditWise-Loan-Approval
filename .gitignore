@@ -1,6 +1,39 @@
+# Python
 __pycache__/
+*.py[cod]
+*.pyo
+
+# Jupyter
 .ipynb_checkpoints/
-*.pyc
-.venv/
+
+# Virtual environments
 venv/
+.venv/
+env/
 .env
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build files
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Cache
+.cache/
+
+# Dataset
+loan_approval_data.csv
