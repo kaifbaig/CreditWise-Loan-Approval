@@ -55,7 +55,7 @@ col1, col2 = st.columns(2)
 with col1:
     employment_status = st.selectbox(
         "Employment Status",
-        ["Salaried", "Self-Employed", "Business"]
+        ["Salaried", "Contract", "Self-employed", "Unemployed"]
     )
 
     applicant_income = st.number_input(
@@ -68,7 +68,7 @@ with col1:
     savings = st.number_input(
         "Savings",
         min_value=0.0,
-        value=50000.0,
+        value=10000.0,
         step=1000.0
     )
 
@@ -82,7 +82,7 @@ with col1:
 with col2:
     employer_category = st.selectbox(
         "Employer Category",
-        ["Govt", "Private", "Self"]
+        ["Private", "Government", "MNC", "Business", "Unemployed"]
     )
 
     coapplicant_income = st.number_input(
@@ -115,7 +115,7 @@ with col1:
     loan_amount = st.number_input(
         "Loan Amount",
         min_value=0.0,
-        value=200000.0,
+        value=20000.0,
         step=1000.0
     )
 
@@ -128,20 +128,20 @@ with col1:
 
     loan_purpose = st.selectbox(
         "Loan Purpose",
-        ["Home", "Education", "Personal", "Business"]
+        ["Home", "Education", "Personal", "Business", "Car"]
     )
 
 with col2:
     collateral_value = st.number_input(
         "Collateral Value",
         min_value=0.0,
-        value=100000.0,
+        value=25000.0,
         step=1000.0
     )
 
     property_area = st.selectbox(
         "Property Area",
-        ["Urban", "Semi-Urban", "Rural"]
+        ["Urban", "Semiurban", "Rural"]
     )
 
 st.divider()
@@ -176,9 +176,6 @@ if predict_button:
         "Employer_Category": employer_category
     }])
 
-    input_data["DTI_Ratio_sq"] = input_data["DTI_Ratio"] ** 2
-    input_data["Credit_Score_sq"] = input_data["Credit_Score"] ** 2
-        
     data_ranges = {
         "Applicant_Income": (2009, 19988),
         "Coapplicant_Income": (1, 9996),

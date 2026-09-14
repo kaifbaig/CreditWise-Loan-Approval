@@ -10,7 +10,7 @@ A Machine Learning classification project that predicts whether a loan applicati
 
 CreditWise is an end-to-end supervised Machine Learning classification project developed to predict loan approval outcomes from historical loan application data.
 
-The project covers the complete workflow from data understanding and exploratory data analysis to preprocessing, feature engineering, model comparison, hyperparameter tuning, and final model selection.
+The project covers the complete workflow from data understanding and exploratory data analysis to preprocessing, model comparison using cross-validation, hyperparameter tuning, and final model selection.
 
 Three classification algorithms were evaluated:
 
@@ -53,7 +53,7 @@ After removing rows with missing target values, **950 labeled records** were ava
 
 | Feature | Description |
 |---|---|
-| `Applicant_ID` | Unique applicant identifier |
+| `Applicant_ID` | Unique applicant identifier (dropped before modeling) |
 | `Applicant_Income` | Applicant income |
 | `Coapplicant_Income` | Coapplicant income |
 | `Employment_Status` | Employment status |
@@ -108,7 +108,7 @@ The target distribution was considered when interpreting model performance.
 
 ![Correlation Heatmap](images/correlation_heatmap.png)
 
-Correlation analysis was performed on numerical features together with the target variable to understand relationships between the numerical variables and loan approval.
+Correlation analysis was performed on numerical features together with the target variable on the training set to understand relationships between the numerical variables and loan approval without data leakage.
 
 Among the numerical features, Credit Score showed the strongest positive relationship with loan approval, while DTI Ratio showed the strongest negative relationship.
 
@@ -123,118 +123,95 @@ The distributions of the numerical variables were inspected to understand their 
 ## 🔄 Machine Learning Workflow
 
 ```text
-Data Loading
-     ↓
-Raw Data Inspection
+Data Loading & Inspection
      ↓
 Initial Exploratory Data Analysis
      ↓
-Remove Rows with Missing Target
+Data Cleaning (Drop Missing Target & Applicant ID)
      ↓
-Separate Features and Target
+Train-Test Split (80% Train, 20% Held-Out Test)
      ↓
-Correlation Analysis
+Feature Type Definition (11 Numerical, 1 Ordinal, 6 Nominal)
      ↓
-Train-Test Split
+Preprocessing Pipeline (ColumnTransformer)
+     ├── Numerical: SimpleImputer(mean) + StandardScaler
+     ├── Ordinal: SimpleImputer(most_frequent) + OrdinalEncoder
+     └── Nominal: SimpleImputer(most_frequent) + OneHotEncoder
      ↓
-Feature Type Detection
-     ↓
-Data Preprocessing
-     ├── Numerical Imputation
-     ├── Numerical Scaling
-     ├── Education-Level Ordinal Encoding
-     └── Other Categorical One-Hot Encoding
-     ↓
-Baseline Model Training
+Baseline 5-Fold Cross-Validation on Train Data
      ├── Logistic Regression
      ├── KNN
      └── Gaussian Naive Bayes
      ↓
-Model Evaluation
+Hyperparameter Tuning (GridSearchCV with scoring="f1")
      ↓
-Feature Engineering
-     ├── DTI_Ratio²
-     └── Credit_Score²
+Final Model Selection (Logistic Regression)
      ↓
-Retraining & Re-evaluation
+Single Final Evaluation on Held-Out Test Set
      ↓
-Hyperparameter Tuning
-     ↓
-Final Model Comparison
-     ↓
-Best Model Selection
+Pipeline Serialization (model.pkl) & Streamlit Deployment
 ```
 
 ---
 
 ## ⚙️ Data Preprocessing
 
-Different preprocessing techniques were applied according to feature type.
+To prevent data leakage, all preprocessing transformations are encapsulated within scikit-learn `Pipeline` and `ColumnTransformer` objects fitted exclusively on the training set.
 
 ### Numerical Features
 
-Missing numerical values were handled using mean imputation, followed by standardization using `StandardScaler`.
+Missing numerical values are imputed using mean imputation, followed by standardization using `StandardScaler`.
 
 ```text
-Numerical Features
+Numerical Features (11)
        ↓
 SimpleImputer(strategy="mean")
        ↓
-StandardScaler
+StandardScaler()
 ```
 
-Scaling is especially important for distance-based algorithms such as KNN and also ensures that numerical features are placed on comparable scales.
+Scaling is critical for distance-sensitive models like KNN and helps gradient-based solvers in Logistic Regression converge efficiently.
 
 ### Categorical Features
 
-Categorical features were divided into:
+Categorical features are divided into ordinal and nominal subsets:
 
-- Ordinal categorical features
-- Nominal categorical features
+#### Education Level (Ordinal)
 
-#### Education Level
-
-The actual `Education_Level` categories in the dataset are:
-
+`Education_Level` contains two categories with a natural educational progression:
 - Not Graduate
 - Graduate
 
-Because these categories have a natural ordering in the context of education level, `OrdinalEncoder` was used:
+These are encoded using `OrdinalEncoder`:
 
 ```text
 Not Graduate → 0
 Graduate     → 1
 ```
 
-#### Other Categorical Features
+#### Other Categorical Features (Nominal)
 
-The remaining categorical variables were treated as nominal features and encoded using `OneHotEncoder`.
+The remaining six categorical variables (`Employment_Status`, `Marital_Status`, `Loan_Purpose`, `Property_Area`, `Gender`, `Employer_Category`) are treated as nominal features:
 
 ```text
-Categorical Features
+Categorical Features (6)
        ↓
 SimpleImputer(strategy="most_frequent")
        ↓
-OneHotEncoder
+OneHotEncoder(drop="first", handle_unknown="ignore")
 ```
 
-The categorical encoder uses:
-
-- `drop="first"`
-- `handle_unknown="ignore"`
-
-`drop="first"` reduces redundant dummy variables, while `handle_unknown="ignore"` allows unseen categories in transformed data to be handled safely.
+- `drop="first"` removes collinear reference categories.
+- `handle_unknown="ignore"` ensures that new or unseen categories at inference time are handled gracefully without raising errors.
 
 ### Target Encoding
 
-The target variable was explicitly encoded as:
+The target variable is binary encoded before model training:
 
 ```text
 No  → 0
 Yes → 1
 ```
-
-The target is handled separately from feature preprocessing and is not passed through the feature `ColumnTransformer`.
 
 ---
 
@@ -242,283 +219,142 @@ The target is handled separately from feature preprocessing and is not passed th
 
 ### 1. Logistic Regression
 
-Logistic Regression was used as a linear classification algorithm to predict loan approval outcomes.
-
-It provides a strong and interpretable baseline for binary classification problems.
+Logistic Regression serves as a linear classification algorithm predicting loan approval probability via the log-odds function. It provides highly interpretable coefficients and well-calibrated probabilities, making it the industry standard for credit scoring.
 
 ### 2. K-Nearest Neighbors (KNN)
 
-KNN classifies an observation based on the classes of nearby training observations.
-
-Because KNN relies on distances between observations, feature scaling is particularly important.
+KNN classifies applicants based on the majority label among their $k$ nearest neighbors in the standardized feature space.
 
 ### 3. Gaussian Naive Bayes
 
-Gaussian Naive Bayes is a probabilistic classification algorithm based on Bayes' theorem and assumes Gaussian distributions for numerical features.
+Gaussian Naive Bayes is a probabilistic classifier applying Bayes' Theorem under the assumption of feature conditional independence.
 
 ---
 
 ## 📏 Evaluation Metrics
 
-The following metrics were used to evaluate every model:
+The models are evaluated using:
 
-- Accuracy
-- Precision
-- Recall
-- F1 Score
-- Confusion Matrix
-
-### Why Multiple Metrics?
-
-Accuracy measures the overall percentage of correct predictions, but it does not describe the types of mistakes being made.
-
-For this project:
-
-- Precision is useful when we want to understand how reliable predicted approvals are.
-- Recall measures how many actual approved applications are correctly identified.
-- F1 Score provides a balance between Precision and Recall.
-
-With:
-
-```text
-0 → Rejected
-1 → Approved
-```
-
-a false positive means:
-
-```text
-Actual:    Rejected
-Predicted: Approved
-```
-
-Therefore, precision for the Approved class helps measure how frequently approval predictions are actually correct.
-
-For the final model comparison, the complete set of metrics was considered, with F1 Score providing an important measure of the Precision-Recall balance.
+- **Accuracy**: Overall proportion of correct predictions.
+- **Precision**: Proportion of predicted approvals that are actual approvals ($rac{TP}{TP + FP}$). High precision minimizes costly false approvals.
+- **Recall**: Proportion of actual approvals correctly approved by the model ($rac{TP}{TP + FN}$).
+- **F1 Score**: Harmonic mean of Precision and Recall ($rac{2 \cdot P \cdot R}{P + R}$), providing the primary balanced selection metric.
+- **Confusion Matrix**: Granular count of True Negatives, False Positives, False Negatives, and True Positives.
 
 ---
 
-## 🧪 Baseline Model Results
+## 🧪 Baseline Cross-Validation Results
 
-Before feature engineering and hyperparameter tuning, the models achieved the following test-set results:
+The three core models were evaluated using 5-fold stratified cross-validation on the training set ($N = 760$):
 
-| Model | Accuracy | Precision | Recall | F1 Score |
-|---|---:|---:|---:|---:|
-| Logistic Regression | 90.00% | 85.96% | 81.67% | 83.76% |
-| KNN | 86.84% | 78.69% | 80.00% | 79.34% |
-| Gaussian Naive Bayes | 88.95% | 80.95% | 85.00% | 82.93% |
+| Model | CV F1 (Mean) | CV F1 (Std) | CV Accuracy (Mean) |
+|---|---:|---:|---:|
+| **Logistic Regression** | **77.28%** | ± 3.09% | 86.18% |
+| **KNN** | 73.01% | ± 2.93% | 83.42% |
+| **Gaussian Naive Bayes** | **77.51%** | ± 5.48% | 86.97% |
 
-### Baseline Observation
+### Baseline Observations
 
-Logistic Regression achieved the highest baseline Accuracy, Precision, and F1 Score.
-
-Gaussian Naive Bayes achieved the highest baseline Recall.
-
----
-
-## 🧬 Feature Engineering
-
-Two nonlinear features were introduced:
-
-- `DTI_Ratio²`
-- `Credit_Score²`
-
-They were created by squaring the original `DTI_Ratio` and `Credit_Score` features.
-
-```python
-X_train["DTI_Ratio_sq"] = X_train["DTI_Ratio"] ** 2
-X_test["DTI_Ratio_sq"] = X_test["DTI_Ratio"] ** 2
-
-X_train["Credit_Score_sq"] = X_train["Credit_Score"] ** 2
-X_test["Credit_Score_sq"] = X_test["Credit_Score"] ** 2
-```
-
-The original features were retained alongside the engineered features.
-
-### Why These Features?
-
-The purpose was to test whether nonlinear transformations of:
-
-- Debt-to-Income Ratio
-- Credit Score
-
-could provide additional predictive information to the models.
-
-### Feature Engineering Results
-
-After adding the engineered features, all three models produced the same test-set predictions and metrics as the baseline models.
-
-| Model | Baseline Accuracy | FE Accuracy | Baseline F1 | FE F1 |
-|---|---:|---:|---:|---:|
-| Logistic Regression | 90.00% | 90.00% | 83.76% | 83.76% |
-| KNN | 86.84% | 86.84% | 79.34% | 79.34% |
-| Gaussian Naive Bayes | 88.95% | 88.95% | 82.93% | 82.93% |
-
-### Feature Engineering Observation
-
-The engineered features were successfully incorporated into the preprocessing and model pipelines, but they did not improve the test-set performance on this dataset.
-
-This is a valid Machine Learning outcome. Feature engineering does not guarantee an improvement in model performance for every dataset.
+- **Logistic Regression** and **Gaussian Naive Bayes** achieved comparable baseline CV F1 scores (~77.3% vs ~77.5%).
+- Logistic Regression demonstrated greater stability across folds, with a standard deviation of only **3.09%** compared to **5.48%** for Naive Bayes.
+- **KNN** trailed both probabilistic models, achieving 73.01% CV F1.
 
 ---
 
 ## 🔧 Hyperparameter Tuning
 
-After feature engineering, hyperparameter tuning was performed using `GridSearchCV` with 5-fold cross-validation.
+Hyperparameter tuning was conducted using `GridSearchCV` with 5-fold cross-validation on the training data.
 
-The tuning objective was:
+In accordance with project objectives, the tuning optimization objective was:
 
-```text
-scoring="accuracy"
+```python
+scoring = "f1"
 ```
 
-This means the hyperparameters were optimized based on cross-validation Accuracy.
+### Tuning Grids & Best Parameters
 
-Final model selection, however, considered the complete set of test-set metrics.
+1. **Logistic Regression**:
+   - Parameter Grid: `C = [0.01, 0.1, 1, 10, 100]`
+   - **Best Parameter**: `C = 1`
+   - **Best 5-Fold CV F1**: **77.28%**
 
-### Logistic Regression
+2. **K-Nearest Neighbors (KNN)**:
+   - Parameter Grid: `n_neighbors = [3, 5, 7, 9, 11, 15]`
+   - **Best Parameter**: `n_neighbors = 15`
+   - **Best 5-Fold CV F1**: **74.75%**
 
-The following values of `C` were evaluated:
-
-```text
-C = [0.01, 0.1, 1, 10, 100]
-```
-
-Best Parameter: `C = 100`
-
-Best Cross-Validation Accuracy: **90.39%**
-
-### KNN
-
-The number of neighbors was tuned using multiple candidate values.
-
-Best Parameter: `n_neighbors = 11`
-
-Best Cross-Validation Accuracy: **88.03%**
-
-### Gaussian Naive Bayes
-
-The variance smoothing parameter was tuned.
-
-Best Parameter: `var_smoothing = 1e-11`
-
-Best Cross-Validation Accuracy: **88.95%**
+3. **Gaussian Naive Bayes**:
+   - Parameter Grid: `var_smoothing = [1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6]`
+   - **Best Parameter**: `var_smoothing = 1e-11`
+   - **Best 5-Fold CV F1**: **77.51%**
 
 ### Best Hyperparameters Summary
 
-| Model | Best Hyperparameter | Best CV Accuracy |
+| Model | Best Hyperparameter | Best CV F1 Score |
 |---|---|---:|
-| Logistic Regression | C = 100 | 90.39% |
-| KNN | n_neighbors = 11 | 88.03% |
-| Gaussian Naive Bayes | var_smoothing = 1e-11 | 88.95% |
+| **Logistic Regression** | `C = 1` | **77.28%** |
+| **KNN** | `n_neighbors = 15` | 74.75% |
+| **Gaussian Naive Bayes** | `var_smoothing = 1e-11` | **77.51%** |
 
 ---
 
-## 📊 Final Model Comparison
+## 🏆 Final Model Selection
 
-![Final Model Performance Comparison](images/model_comparison.png)
+### Selected Model: Logistic Regression (`C = 1`)
 
-The following results were obtained on the held-out test set after feature engineering and hyperparameter tuning:
+**Logistic Regression** was selected as the final production model for three key reasons:
 
-| Model | Accuracy | Precision | Recall | F1 Score |
-|---|---:|---:|---:|---:|
-| **Logistic Regression** | **90.00%** | 81.54% | **88.33%** | **84.80%** |
-| KNN | 88.95% | **83.05%** | 81.67% | 82.35% |
-| Gaussian Naive Bayes | 88.95% | 80.95% | 85.00% | 82.93% |
-
-### Final Observations
-
-- Logistic Regression achieved the highest Accuracy.
-- Logistic Regression achieved the highest Recall.
-- Logistic Regression achieved the highest F1 Score.
-- KNN achieved the highest Precision.
-- Gaussian Naive Bayes achieved 85.00% Recall.
-- Logistic Regression provided the strongest overall balance across the evaluated metrics.
+1. **Performance & Stability**: Achieved a competitive 5-fold CV F1 score of **77.28%** with low fold variance ($\sigma = 0.0309$).
+2. **Calibrated Probability Outputs**: Unlike Naive Bayes (whose conditional independence assumption skews predicted probabilities toward 0 or 1), Logistic Regression produces calibrated probabilities suitable for risk thresholding and tiered underwriting.
+3. **Interpretability**: Linear model coefficients directly represent feature contributions (odds ratios), providing clear transparency into how individual applicant features influence loan approval predictions.
 
 ---
 
-## 🏆 Best Model Selection
+## 📊 Final Held-Out Test Set Evaluation
 
-### Logistic Regression
-
-Logistic Regression was selected as the final model after hyperparameter tuning.
-
-### Final Performance
+Following strict train/CV/test discipline, the finalized Logistic Regression pipeline was evaluated **once** on the completely held-out test set ($N = 190$):
 
 | Metric | Score |
 |---|---:|
-| Accuracy | **90.00%** |
-| Precision | 81.54% |
-| Recall | **88.33%** |
-| F1 Score | **84.80%** |
+| **Accuracy** | **88.95%** (169 / 190) |
+| **Precision** | **85.45%** |
+| **Recall** | **78.33%** |
+| **F1 Score** | **81.74%** |
 
-Logistic Regression achieved the highest:
-
-- Accuracy
-- Recall
-- F1 Score
-
-KNN achieved the highest Precision at 83.05%.
-
-Therefore, Logistic Regression was selected because it provided the strongest overall performance while maintaining the best balance between Precision and Recall.
-
----
-
-## 🧮 Final Confusion Matrix
-
-![Final Confusion Matrix](images/confusion_matrix.png)
-
-The final Logistic Regression model produced the following confusion matrix:
+### Confusion Matrix
 
 ```text
                  Predicted
                 Rejected  Approved
 
-Actual Rejected    118       12
-Actual Approved      7       53
+Actual Rejected    122        8
+Actual Approved     13       47
 ```
 
-This corresponds to:
-
-- True Negatives: 118
-- False Positives: 12
-- False Negatives: 7
-- True Positives: 53
-
-### Interpretation
-
-- 118 rejected applications were correctly predicted as rejected.
-- 12 rejected applications were incorrectly predicted as approved.
-- 7 approved applications were incorrectly predicted as rejected.
-- 53 approved applications were correctly predicted as approved.
+- **True Negatives**: **122** rejected applications correctly classified as rejected.
+- **False Positives**: **8** rejected applications incorrectly classified as approved (low rate, protecting the lender from bad credit risk).
+- **False Negatives**: **13** approved applications incorrectly classified as rejected.
+- **True Positives**: **47** approved applications correctly identified.
 
 ---
 
 ## 💡 Key Takeaways
 
-- Different feature types require different preprocessing strategies.
-- Missing target values should be removed because their true class is unknown.
-- A `ColumnTransformer` provides a clean way to apply different preprocessing operations to numerical and categorical features.
-- `Education_Level` was treated separately using ordinal encoding because the dataset contains the two categories Not Graduate and Graduate.
-- The remaining categorical variables were handled using one-hot encoding.
-- Feature scaling is particularly important for distance-based algorithms such as KNN.
-- Feature engineering using `DTI_Ratio²` and `Credit_Score²` did not improve the test-set predictions for this dataset.
-- Hyperparameter tuning improved the final Logistic Regression balance between Precision and Recall.
-- Logistic Regression achieved the highest final Accuracy, Recall, and F1 Score.
-- KNN achieved the highest final Precision.
-- Model selection should consider the business consequences of different types of classification errors rather than relying on a single metric.
+- **Leak-Free Preprocessing**: Encapsulating numerical scaling, missing value imputation, and categorical encoding inside a single `ColumnTransformer` within an sklearn `Pipeline` prevents data leakage and ensures reproducible inference.
+- **F1-Optimized Tuning**: Tuning hyperparameters with `scoring="f1"` properly balanced precision and recall rather than biasing predictions toward the majority rejected class.
+- **Model Parsimony**: The original 18 clean, domain-meaningful features provide strong predictive performance without introducing structural multicollinearity or complex feature dependencies.
+- **Calibrated Decision Making**: Logistic Regression provides the probability calibration and explainability essential for responsible automated lending workflows.
 
 ---
 
 ## 🛠️ Technologies Used
 
-- Python
-- Pandas
-- NumPy
-- Matplotlib
-- Seaborn
-- Scikit-learn
-- Jupyter Notebook
+- **Python 3.13**
+- **Scikit-learn** (Pipelines, ColumnTransformer, GridSearchCV, Metrics)
+- **Pandas** & **NumPy** (Data processing)
+- **Matplotlib** & **Seaborn** (Exploratory data visualization)
+- **Streamlit** (Interactive web application deployment)
+- **Joblib** (Model serialization)
 
 ---
 
@@ -534,11 +370,11 @@ CreditWise-Loan-Approval/
 │   ├── model_comparison.png
 │   └── target_distribution.png
 │
-├── credit_wise.ipynb
-├── app.py
-├── model.pkl
-├── README.md
-├── requirements.txt
+├── credit_wise.ipynb          # Clean, leak-free Jupyter notebook workflow
+├── app.py                     # Streamlit web application
+├── model.pkl                  # Serialized final scikit-learn pipeline
+├── README.md                  # Project documentation
+├── requirements.txt           # Project dependencies
 └── .gitignore
 ```
 
@@ -548,52 +384,34 @@ CreditWise-Loan-Approval/
 
 This project is developed for educational and portfolio purposes only.
 
-The model is not intended to be used as a real-world automated financial decision-making system.
+The model is not intended to be used as a real-world automated financial decision-making system. A production loan approval system requires substantially larger datasets, fairness and bias audits, stress testing across economic cycles, and human oversight.
 
-A production loan approval system would require substantially more data, external validation, fairness and bias assessment, threshold analysis, domain expertise, regulatory review, continuous monitoring, and appropriate human oversight.
-
-The reported performance reflects the specific dataset and test split used in this project and should not be interpreted as real-world financial decision-making accuracy.
+---
 
 ## 🖥️ Streamlit Demo
 
 🔗 **[Live Demo](https://creditwise-loan-predict.streamlit.app/)**
 
-CreditWise includes a Streamlit web application that allows users to enter applicant, employment, financial, and loan information and receive a loan approval prediction from the trained Logistic Regression pipeline.
+CreditWise includes an interactive Streamlit web application that accepts applicant, employment, financial, and loan information and generates predictions and approval probabilities using the trained Logistic Regression pipeline.
 
 The application includes:
 
-- Interactive input fields
-- Input validation
-- Dataset-range warnings for unusual values
-- Feature engineering
-- Loan approval prediction
-- Approval probability display
+- Interactive inputs for applicant, employment, financial, and loan details
+- Input bounds validation (preventing negative income, loans, etc.)
+- Out-of-distribution warnings for inputs outside observed training ranges
+- Instant loan approval prediction (**Approved** vs **Rejected**)
+- Estimated approval probability display
 
-### 📸 Application Screenshots
+### Running the Application Locally
 
-#### Normal Prediction
-![CreditWise Normal Prediction](images/app_normal_prediction.png)
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-#### Out-of-Distribution Input Warning
-![CreditWise OOD Warning](images/app_ood_warning.png)
+2. Launch Streamlit:
+   ```bash
+   streamlit run app.py
+   ```
 
-#### Loan Rejected Prediction
-![CreditWise Rejected Prediction](images/app_rejected_prediction.png)
-
-### Running the Application
-
-Install the required dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-Run the Streamlit application:
-
-```bash
-streamlit run app.py
-```
-
-The application will open in the browser and provide an interactive interface for making predictions.
-
-**Note:** The application is intended for educational and portfolio demonstration purposes. Predictions should not be treated as actual financial decisions.
+3. Access the web interface in your browser at `http://localhost:8501`.
